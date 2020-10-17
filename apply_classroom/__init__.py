@@ -18,3 +18,6 @@ with app.app_context():
     from .views import user_view
     app.register_blueprint(user_view, url_prefix="/cxm")
 
+    from .views import room_view
+    app.register_blueprint(room_view, url_prefix="/cxm")
+

@@ -1,0 +1,39 @@
+{
+    "editor.fontSize": 14,
+    "files.autoSave": "onFocusChange",
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/*.pyc": true,
+        "**/__pycache__": true
+    },
+    "extensions.ignoreRecommendations": true,
+    "workbench.startupEditor": "newUntitledFile",
+    "git.ignoreLegacyWarning": true,
+    "typescript.check.npmIsInstalled": false,
+    "python.pythonPath": "/usr/bin/python",
+    "python.linting.lintOnSave": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.pycodestyleEnabled": true,
+    "python.linting.pylintArgs": [
+        "--disable=C0103,W0703,W0612,C0301,C0411,C0111,W1201, W1202, E1101, C0413"
+    ],
+    "python.linting.pycodestyleArgs": [
+        "--max-line-length=160",
+        "--disable=E402"
+    ],
+    "python.formatting.autopep8Args": [
+        "--max-line-length=160"
+    ],
+    "python.terminal.activateEnvironment": false,
+    "window.newWindowDimensions": "maximized",
+    "javascript.updateImportsOnFileMove.enabled": "never",
+    "problems.decorations.enabled": false,
+    "editor.detectIndentation": false,
+    "window.zoomLevel": 0,
+    //"editor.formatOnSave": true,
+    "editor.formatOnSaveTimeout": 7500
+}
