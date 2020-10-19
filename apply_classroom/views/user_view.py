@@ -1,11 +1,13 @@
 from flask import Blueprint, request, session
 from ..repositorys.props import auth, success, error, panic
-from ..models import User
+from ..models import User, ApplyRecord
 from .. import db
 from ..config import Config
-from ..services.tool import base_query, get_user_info
+from ..services.tool import base_query, get_user_info, get_record_info
 import requests
 import json
+import datetime
+from sqlalchemy import or_
 
 user_view = Blueprint("user_view", __name__)
 
@@ -40,6 +42,7 @@ def user_query():
 
     return success({
         "is_bind": is_bind,
+        "open_id": user_openid,
         "user_id": user_id
     })
 
@@ -51,7 +54,7 @@ def user_upsert():
     data = request.get_json()
     user = User()
     user.name = data["name"]
-    user.phone = date["phone"]
+    user.phone = data["phone"]
     user.openid = data["openid"]
     user.nickname = data["nickname"]
     user.head_img = data["head_img"]
@@ -78,4 +81,90 @@ def user_info():
 
     return success({
         "result": result
+    })
+
+
+# 查询用户申请教室的历史信息
+@user_view.route("/user/record", methods=["GET"])
+@panic()
+def user_record():
+
+    user_id = request.args.get("user_id")
+
+    today = datetime.datetime.now()   # 精确到时分秒
+    today_date = datetime.datetime(today.year, today.month, today.day)
+    
+    user_info = get_user_info(user_id)
+    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(user_id=user_id).order_by(ApplyRecord.apply_date.desc()).all()
+
+    applying = []
+    applyed = []
+    apply_fail = []
+    need_dispose = []
+    for record in records:
+        if record.apply_status == 1:
+            applying.append(get_record_info(record.id))
+        elif record.apply_status == 2:
+            cur_record = get_record_info(record.id)
+            dispose = get_user_info(cur_record["dispose_by"])
+            cur_record.update({"dispose_name": dispose["name"]})
+            applyed.append(cur_record)
+        elif record.apply_status == 0 and record.dispose_by != None:
+            apply_fail.append(get_record_info(record.id))
+
+    if user_info["is_admin"] == 1:
+        records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter(ApplyRecord.apply_status==1).all()
+        for record in records:
+            need_dispose.append(get_record_info(record.id))
+
+    result = {
+        "user_info": user_info,
+        "applying": applying,
+        "applyed": applyed,
+        "apply_fail": apply_fail,
+        "need_dispose": need_dispose
+    }
+
+    return success({
+        "result": result
+    })
+
+
+# 根据user的name或者phone查找user
+@user_view.route("/user/condition/query", methods=["GET"])
+@panic()
+def condition_query():
+    name = request.args.get("name")
+    phone = request.args.get("phone")
+
+    is_find = False
+    user_find = {}
+    # model.query.filter(or_(model.is_delete.is_(None), model.is_delete == 0))
+    user = base_query(User).filter(or_(User.name == name, User.phone == phone)).first()
+    if user is not None:
+        is_find = True
+        user_find = get_user_info(user.id)
+
+    return success({
+        "is_find": is_find,
+        "user_find": user_find
+    })
+
+
+# 添加管理员
+@user_view.route("/admin/add", methods=["POST"])
+@panic()
+def admin_add():
+    data = request.get_json()
+    
+    is_ok = False
+    user_id = data["user_id"]
+    user = base_query(User).filter_by(id=user_id)
+    if user is not None:
+        is_ok = True
+        user.is_admin = 1
+
+    db.session.commit()
+    return success({
+        "is_ok": is_ok
     })
