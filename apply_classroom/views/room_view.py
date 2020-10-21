@@ -181,3 +181,43 @@ def record_disagree():
     db.session.commit()
 
     return success()
+
+
+# 添加可选择教室
+@room_view.route("/room/add", methods=["POST"])
+@panic()
+def room_add():
+    data = request.get_json()
+    room_name = data["room_name"]
+
+    is_ok = False
+    room = base_query(AlternativeRoom).filter_by(name=room_name).first()
+    if room is None:
+        is_ok = True
+        room = AlternativeRoom()
+        room.name = room_name
+        db.session.add(room)
+
+    db.session.commit()
+    return success({
+        "is_ok": is_ok
+    })
+
+
+# 删除教室
+@room_view.route("/room/del", methods=["POST"])
+@panic()
+def room_del():
+    data = request.get_json()
+    room_id = data["room_id"]
+
+    rooms = base_query(AlternativeRoom).filter_by(id=room_id).all()
+    for room in rooms:
+        room.is_delete = 1
+
+    records = base_query(ApplyRecord).filter_by(room_id=room_id).all()
+    for record in records:
+        record.is_delete = 1
+
+    db.session.commit()
+    return success()

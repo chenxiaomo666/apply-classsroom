@@ -1,6 +1,6 @@
 from flask import Blueprint, request, session
 from ..repositorys.props import auth, success, error, panic
-from ..models import User, ApplyRecord
+from ..models import User, ApplyRecord, AlternativeRoom
 from .. import db
 from ..config import Config
 from ..services.tool import base_query, get_user_info, get_record_info
@@ -110,19 +110,42 @@ def user_record():
             cur_record.update({"dispose_name": dispose["name"]})
             applyed.append(cur_record)
         elif record.apply_status == 0 and record.dispose_by != None:
-            apply_fail.append(get_record_info(record.id))
+            cur_record = get_record_info(record.id)
+            dispose = get_user_info(cur_record["dispose_by"])
+            cur_record.update({"dispose_name": dispose["name"]})
+            apply_fail.append(cur_record)
 
     if user_info["is_admin"] == 1:
-        records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter(ApplyRecord.apply_status==1).all()
+        records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(apply_status=1).all()
         for record in records:
             need_dispose.append(get_record_info(record.id))
+
+    option_room_list = []
+    rooms = base_query(AlternativeRoom).all()
+    for room in rooms:
+        cur = {}
+        cur["id"] = room.id
+        cur["name"] = room.name
+        cur["charge"] = room.charge
+        option_room_list.append(cur)
+
+    all_applyed = []    # 所有已申请信息
+    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(apply_status=2).all()
+    for record in records:
+        cur_record = get_record_info(record.id)
+        dispose = get_user_info(cur_record["dispose_by"])
+        cur_record.update({"dispose_name": dispose["name"]})
+        all_applyed.append(cur_record)
+
 
     result = {
         "user_info": user_info,
         "applying": applying,
         "applyed": applyed,
         "apply_fail": apply_fail,
-        "need_dispose": need_dispose
+        "need_dispose": need_dispose,
+        "all_applyed": all_applyed,
+        "option_room_list": option_room_list
     }
 
     return success({
@@ -159,7 +182,7 @@ def admin_add():
     
     is_ok = False
     user_id = data["user_id"]
-    user = base_query(User).filter_by(id=user_id)
+    user = base_query(User).filter_by(id=user_id).first()
     if user is not None:
         is_ok = True
         user.is_admin = 1
