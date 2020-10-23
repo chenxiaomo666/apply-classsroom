@@ -9,4 +9,5 @@ class AlternativeRoom(db.Model):
     id = db.Column("id", db.Integer, primary_key=True)
     name = db.Column("name", db.String(64))
     charge = db.Column("charge", db.String(64))
+    add_time = db.Column("add_time", db.DateTime)
     is_delete = db.Column("is_delete", db.Integer)

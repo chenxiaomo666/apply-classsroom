@@ -142,6 +142,7 @@ def apply_room():
         record.user_name = apply_user["name"]
         record.user_phone = apply_user["phone"]
         record.apply_reason = reason
+        record.submit_time = datetime.datetime.now()    # 用户提交时间
 
     db.session.commit()
     return success()
@@ -157,15 +158,16 @@ def record_agree():
     record_id = data["record_id"]
 
     record = base_query(ApplyRecord).filter_by(id=record_id).first()
-    record.apply_status = 2
+    record.apply_status = 2    # 申请成功
     record.dispose_by = user_id
+    record.dispose_time = datetime.datetime.now()    # 管理员处理时间
 
     db.session.commit()
 
     return success()
 
 
-# 管理员同意申请
+# 管理员不同意申请
 @room_view.route("/record/disagree", methods=["POST"])
 @panic()
 def record_disagree():
@@ -177,6 +179,7 @@ def record_disagree():
     record = base_query(ApplyRecord).filter_by(id=record_id).first()
     record.apply_status = 0
     record.dispose_by = user_id
+    record.dispose_time = datetime.datetime.now()    # 管理员处理时间
 
     db.session.commit()
 
@@ -189,6 +192,8 @@ def record_disagree():
 def room_add():
     data = request.get_json()
     room_name = data["room_name"]
+    user_id = data.get("user_id")
+    user_info = get_user_info(user_id)
 
     is_ok = False
     room = base_query(AlternativeRoom).filter_by(name=room_name).first()
@@ -196,6 +201,8 @@ def room_add():
         is_ok = True
         room = AlternativeRoom()
         room.name = room_name
+        room.add_time = datetime.datetime.now()    # 添加教室的时间
+        room.charge = user_info.get("name")    # 添加教室的用户名字（仅管理员）
         db.session.add(room)
 
     db.session.commit()
@@ -211,9 +218,8 @@ def room_del():
     data = request.get_json()
     room_id = data["room_id"]
 
-    rooms = base_query(AlternativeRoom).filter_by(id=room_id).all()
-    for room in rooms:
-        room.is_delete = 1
+    room = base_query(AlternativeRoom).filter_by(id=room_id).first()
+    room.is_delete = 1
 
     records = base_query(ApplyRecord).filter_by(room_id=room_id).all()
     for record in records:

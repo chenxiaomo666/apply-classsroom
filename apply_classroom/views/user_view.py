@@ -52,16 +52,27 @@ def user_query():
 @panic()
 def user_upsert():
     data = request.get_json()
-    user = User()
-    user.name = data["name"]
-    user.phone = data["phone"]
-    user.openid = data["openid"]
-    user.nickname = data["nickname"]
-    user.head_img = data["head_img"]
-    user.sex = data["sex"]
-
-    db.session.add(user)
-    db.session.flush()
+    # 如果传过来user_id，不传就是增加
+    user_id = data.get("user_id")
+    user = base_query(User).filter_by(id=user_id).first()
+    if user == None:
+        user = User()
+        user.name = data["name"]
+        user.phone = data["phone"]
+        user.student_id = data["student_id"]   # 新增学号字段
+        user.register_time = datetime.datetime.now()   # 新增注册时间字段
+        user.update_time = datetime.datetime.now()   # 新增更新时间字段
+        user.openid = data["openid"]
+        user.nickname = data["nickname"]
+        user.head_img = data["head_img"]
+        user.sex = data["sex"]
+        db.session.add(user)
+        db.session.flush()
+    else:
+        user.name = data["name"]
+        user.phone = data["phone"]
+        user.student_id = data["student_id"]   # 新增学号字段
+        user.update_time = datetime.datetime.now()   # 新增更新时间字段 
 
     user_id = user.id
     db.session.commit()
@@ -90,17 +101,21 @@ def user_info():
 def user_record():
 
     user_id = request.args.get("user_id")
+    user_info = get_user_info(user_id)
 
     today = datetime.datetime.now()   # 精确到时分秒
     today_date = datetime.datetime(today.year, today.month, today.day)
     
-    user_info = get_user_info(user_id)
-    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(user_id=user_id).order_by(ApplyRecord.apply_date.desc()).all()
+    
+    # 个人申请信息是根据实际日期排序的
+    # records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date)
+    # .filter_by(user_id=user_id).order_by(ApplyRecord.apply_date.desc()).all()
+    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date)\
+    .filter_by(user_id=user_id).order_by(ApplyRecord.apply_date).all()
 
     applying = []
     applyed = []
     apply_fail = []
-    need_dispose = []
     for record in records:
         if record.apply_status == 1:
             applying.append(get_record_info(record.id))
@@ -115,10 +130,21 @@ def user_record():
             cur_record.update({"dispose_name": dispose["name"]})
             apply_fail.append(cur_record)
 
+    need_dispose = []   # 所有需要处理的信息
+    all_applyed = []    # 所有已申请信息
     if user_info["is_admin"] == 1:
         records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(apply_status=1).all()
         for record in records:
             need_dispose.append(get_record_info(record.id))
+
+    # 所有已申请信息根据管理员处理时间展示排序
+    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date)\
+    .order_by(ApplyRecord.apply_date.desc()).filter_by(apply_status=2).all()
+    for record in records:
+        cur_record = get_record_info(record.id)
+        dispose = get_user_info(cur_record["dispose_by"])
+        cur_record.update({"dispose_name": dispose["name"]})
+        all_applyed.append(cur_record)
 
     option_room_list = []
     rooms = base_query(AlternativeRoom).all()
@@ -128,15 +154,6 @@ def user_record():
         cur["name"] = room.name
         cur["charge"] = room.charge
         option_room_list.append(cur)
-
-    all_applyed = []    # 所有已申请信息
-    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(apply_status=2).all()
-    for record in records:
-        cur_record = get_record_info(record.id)
-        dispose = get_user_info(cur_record["dispose_by"])
-        cur_record.update({"dispose_name": dispose["name"]})
-        all_applyed.append(cur_record)
-
 
     result = {
         "user_info": user_info,
@@ -181,13 +198,19 @@ def admin_add():
     data = request.get_json()
     
     is_ok = False
+    already_admin = False
     user_id = data["user_id"]
     user = base_query(User).filter_by(id=user_id).first()
     if user is not None:
-        is_ok = True
-        user.is_admin = 1
+        if user.is_admin == 0:
+            is_ok = True
+            user.is_admin = 1
+        else:
+            is_ok = True
+            already_admin = True
 
     db.session.commit()
     return success({
-        "is_ok": is_ok
+        "is_ok": is_ok,
+        "already_admin": already_admin
     })

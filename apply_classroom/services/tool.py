@@ -25,6 +25,9 @@ def get_user_info(user_id):
             "user_id": user.id,
             "name": user.name,
             "phone": user.phone,
+            "student_id": user.student_id,
+            "register_time": user.register_time,
+            "update_time": user.update_time,
             "is_admin": user.is_admin,
             "openid": user.openid,
             "nickname": user.nickname,
@@ -49,6 +52,8 @@ def get_record_info(record_id):
         cur["user_phone"] = record.user_phone
         cur["apply_reason"] = record.apply_reason
         cur["dispose_by"] = record.dispose_by
+        cur["submit_time"] = record.submit_time
+        cur["dispose_time"] = record.dispose_time
     
     return cur
 
