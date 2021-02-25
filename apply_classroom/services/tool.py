@@ -48,8 +48,9 @@ def get_record_info(record_id):
         cur["apply_time"] = apply_time_han[record.apply_time]
         cur["apply_status"] = record.apply_status
         cur["user_id"] = record.user_id
-        cur["user_name"] = record.user_name
-        cur["user_phone"] = record.user_phone
+        user_info = get_user_info(record.user_id)
+        cur["user_name"] = user_info.get("name")
+        cur["user_phone"] = user_info.get("phone")
         cur["apply_reason"] = record.apply_reason
         cur["dispose_by"] = record.dispose_by
         cur["submit_time"] = record.submit_time
@@ -57,3 +58,57 @@ def get_record_info(record_id):
     
     return cur
 
+
+def get_student_list():
+    users = base_query(User).all()
+    result = []
+    for user in users:
+        result.append(get_user_info(user.id))
+
+    return result
+
+def get_admin_list():
+    users = base_query(User).filter_by(is_admin=1).all()
+    result = []
+    for user in users:
+        result.append(get_user_info(user.id))
+
+    return result
+
+
+# 清除apply_record无用记录
+def del_apply_record():
+    now = datetime.datetime.now()
+    yesterday_now = now - datetime.timedelta(days=1)
+
+    records = base_query(ApplyRecord).filter(ApplyRecord.apply_date<yesterday_now).all()
+    for record in records:
+        db.session.delete(record)
+    
+    db.session.commit()
+
+    return None
+
+
+# add admin
+def add_admin(user_id):
+    user = base_query(User).filter_by(id=user_id).first()
+    
+    if user is not None:
+        user.is_admin = 1
+    
+    db.session.commit()
+
+    return None
+
+
+# change admin to ordinary
+def del_admin(user_id):
+    user = base_query(User).filter_by(id=user_id).first()
+    
+    if user is not None:
+        user.is_admin = 0
+    
+    db.session.commit()
+
+    return None

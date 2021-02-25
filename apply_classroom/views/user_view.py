@@ -3,7 +3,8 @@ from ..repositorys.props import auth, success, error, panic
 from ..models import User, ApplyRecord, AlternativeRoom
 from .. import db
 from ..config import Config
-from ..services.tool import base_query, get_user_info, get_record_info
+from ..services.tool import base_query, get_user_info, get_record_info, add_admin
+from ..services.tool import  get_student_list, get_admin_list, del_apply_record
 import requests
 import json
 import datetime
@@ -99,6 +100,7 @@ def user_info():
 @user_view.route("/user/record", methods=["GET"])
 @panic()
 def user_record():
+    del_apply_record()
 
     user_id = request.args.get("user_id")
     user_info = get_user_info(user_id)
@@ -132,7 +134,7 @@ def user_record():
 
     need_dispose = []   # 所有需要处理的信息
     all_applyed = []    # 所有已申请信息
-    if user_info["is_admin"] == 1:
+    if user_info.get("is_admin") == 1:
         records = base_query(ApplyRecord).filter(ApplyRecord.apply_date>=today_date).filter_by(apply_status=1).all()
         for record in records:
             need_dispose.append(get_record_info(record.id))
@@ -213,4 +215,24 @@ def admin_add():
     return success({
         "is_ok": is_ok,
         "already_admin": already_admin
+    })
+
+
+# 获取全部成员列表
+@user_view.route("/user/student/list", methods=["GET"])
+@panic()
+def student_list():
+
+    return success({
+        "result": get_student_list()
+    })
+
+
+# 获取全部管理员列表
+@user_view.route("/user/admin/list", methods=["GET"])
+@panic()
+def admin_list():
+
+    return success({
+        "result": get_admin_list()
     })
